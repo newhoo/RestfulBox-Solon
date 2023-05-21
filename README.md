@@ -17,9 +17,17 @@ If this plugin helps, please **🌟Star**! If you have any good idea, please let
 - Support jumping to tree in the solon method from apis impl.
 
 ## Install
-- **Using IDE plugin system**
+
+Firstly install `RestfulBox` plugin in Idea online. Then install RestfulBox-Solon.
+
+- **Using IDEA plugin system**
 
 Recommended <kbd>Preferences(Settings)</kbd> > <kbd>Plugins</kbd> > <kbd>Browse repositories...</kbd> > <kbd>find "Solon"</kbd> > <kbd>Install Plugins</kbd>
+
+- **Local install**
+
+Download `distributions/RestfulBox-Solon-x.x.x.zip` and install in idea.
+
 
 ## Usage
 After installed this plugin, you should enable it in `RestfulBox` setting. Refresh in `RestfulBox` window.
