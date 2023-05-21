@@ -1,0 +1,43 @@
+plugins {
+    id("java")
+    id('org.jetbrains.intellij') version '1.10.1'
+}
+
+group 'io.github.newhoo.restkit.ext'
+version '1.0.0'
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_11
+}
+
+repositories {
+    maven { url 'https://maven.aliyun.com/repository/public/' }
+    mavenLocal()
+    mavenCentral()
+}
+
+dependencies {
+    compileOnly 'org.projectlombok:lombok:1.18.22'
+    annotationProcessor 'org.projectlombok:lombok:1.18.22'
+}
+
+intellij {
+    pluginName.set('RestfulBox-Solon')
+    version.set('2022.3')
+    type.set("IU")
+    updateSinceUntilBuild.set(false)
+    downloadSources.set(true)
+    plugins.set(['java', 'io.github.newhoo.restkit:3.0.0'])
+    sandboxDir.set("${rootProject.rootDir}/idea-sandbox")
+}
+
+tasks {
+
+    verifyPluginConfiguration {
+        enabled = false
+    }
+
+    buildSearchableOptions {
+        enabled = false
+    }
+}
