@@ -5,9 +5,6 @@
 [RestfulBox-Solon](https://plugins.jetbrains.com/plugin/21848-solon) is a plugin that support Solon scanning and request for [RestfulBox](https://plugins.jetbrains.com/plugin/14723-restkit) plugin from version 2.0.0.
 
 
-> Note  
-> RestfulBox plugin has provided extension point from version 2.0.0. You can also support your web framework restful apis like this plugin.
-
 If this plugin helps, please **🌟Star**! If you have any good idea, please let me know.
 
 ## Features

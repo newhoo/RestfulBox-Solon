@@ -1,21 +1,26 @@
 <idea-plugin>
     <id>io.github.newhoo.restkit.ext.solon</id>
-    <name>Solon</name>
+    <name>RestfulSolon</name>
     <!--  <version>1.0.0</version>-->
     <vendor email="huzunrong@foxmail.com" url="https://github.com/newhoo/RestfulBox-Solon">RestfulBox</vendor>
 
     <description><![CDATA[
-    <h2><a href="https://plugins.jetbrains.com/plugin/14723-restkit">RestfulBox</a> EXTENSION</h2>
+    <h2><a href="https://plugins.jetbrains.com/plugin/14723-restkit">RestfulBox</a> Extension for Solon</h2>
 
     Support Solon api scanning and request for RestfulBox plugin.
     <br/>
     After installed this plugin, you should enable Solon in RestfulBox plugin setting.
     <br/>
 
-    View more: <a href="https://github.com/newhoo/RestfulBox-Solon">github</a>
+    View more: <a href="https://github.com/newhoo/RestfulBox-Solon">github</a> | <a href="https://gitee.com/newhoo/RestfulBox-Solon">gitee</a>
     ]]></description>
 
     <change-notes><![CDATA[
+        1.0.1
+        <ul>
+            <li>Rename plugin name! See <a href="https://gitee.com/noear/solon/issues/I5R0IW#note_18311249_link">issue</a></li>
+        </ul>
+
         1.0.0
         <ul>
             <li>support Solon http apis with RestfulBox plugin</li>
