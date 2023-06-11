@@ -5,7 +5,7 @@
     <vendor email="huzunrong@foxmail.com" url="https://github.com/newhoo/RestfulBox-Solon">RestfulBox</vendor>
 
     <description><![CDATA[
-    <h2><a href="https://plugins.jetbrains.com/plugin/14723-restkit">RestfulBox</a> Extension for Solon</h2>
+    <h2><a href="https://plugins.jetbrains.com/plugin/14723-restfulbox">RestfulBox</a> Extension for Solon</h2>
 
     Support Solon api scanning and request for RestfulBox plugin.
     <br/>
