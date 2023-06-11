@@ -2,7 +2,7 @@
 
 [简体中文](./README.zh_CN.md)
 
-[RestfulBox-Solon](https://plugins.jetbrains.com/plugin/21848-solon) is a plugin that support Solon scanning and request for [RestfulBox](https://plugins.jetbrains.com/plugin/14723-restkit) plugin from version 2.0.0.
+[RestfulBox-Solon](https://plugins.jetbrains.com/plugin/21848-solon) is a plugin that support Solon scanning and request for [RestfulBox](https://plugins.jetbrains.com/plugin/14723-restfulbox) plugin from version 2.0.0.
 
 
 If this plugin helps, please **🌟Star**! If you have any good idea, please let me know.

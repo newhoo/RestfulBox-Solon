@@ -1,6 +1,6 @@
 # RestfulBox-Solon
 
-本插件是[RestfulBox](https://plugins.jetbrains.com/plugin/14723-restkit) 的辅助插件，用于通过`RestfulBox`提供Solon接口的支持，功能比较完善。如果提升了你的开发效率，不妨一赞，同时也欢迎提供宝贵的建议。
+本插件是[RestfulBox](https://plugins.jetbrains.com/plugin/14723-restfulbox) 的辅助插件，用于通过`RestfulBox`提供Solon接口的支持，功能比较完善。如果提升了你的开发效率，不妨一赞，同时也欢迎提供宝贵的建议。
 
 ## 功能
 - 支持RestfulBox的绝大多数功能。
