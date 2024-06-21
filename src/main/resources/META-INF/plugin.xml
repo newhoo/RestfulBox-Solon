@@ -16,6 +16,11 @@
     ]]></description>
 
     <change-notes><![CDATA[
+        1.0.2
+        <ul>
+            <li>fix bug.</li>
+        </ul>
+
         1.0.1
         <ul>
             <li>Rename plugin name! See <a href="https://gitee.com/noear/solon/issues/I5R0IW#note_18311249_link">issue</a></li>
@@ -30,7 +35,7 @@
     </change-notes>
 
     <!-- please see http://www.jetbrains.org/intellij/sdk/docs/basics/getting_started/build_number_ranges.html for description -->
-    <idea-version since-build="212.0"/>
+    <idea-version since-build="233.6"/>
 
     <!-- please see http://www.jetbrains.org/intellij/sdk/docs/basics/getting_started/plugin_compatibility.html on how to target different products -->
     <!-- uncomment to enable plugin in all products -->

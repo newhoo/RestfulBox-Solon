@@ -4,7 +4,7 @@ plugins {
 }
 
 group 'io.github.newhoo.restkit.ext'
-version '1.0.1'
+version '1.0.2'
 
 java {
     sourceCompatibility = JavaVersion.VERSION_11
@@ -23,11 +23,11 @@ dependencies {
 
 intellij {
     pluginName.set('RestfulBox-Solon')
-    version.set('2022.3')
-    type.set("IU")
+    version.set('2024.1')
+//    type.set("IU")
     updateSinceUntilBuild.set(false)
     downloadSources.set(true)
-    plugins.set(['java', 'io.github.newhoo.restkit:3.0.0'])
+    plugins.set(['java', 'io.github.newhoo.restkit:4.0.0'])
     sandboxDir.set("${rootProject.rootDir}/idea-sandbox")
 }
 

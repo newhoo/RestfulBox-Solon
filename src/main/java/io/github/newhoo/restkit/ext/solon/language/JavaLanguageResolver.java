@@ -53,7 +53,7 @@ public class JavaLanguageResolver extends BaseLanguageResolver {
 //        Set<String> filterClassQualifiedNames = new HashSet<>();
         for (SolonControllerAnnotation controllerAnnotation : supportedAnnotations) {
             // java: 标注了 (Rest)Controller 注解的类，即 Controller 类
-            Collection<PsiAnnotation> psiAnnotations = JavaAnnotationIndex.getInstance().get(controllerAnnotation.getShortName(), module.getProject(), globalSearchScope);
+            Collection<PsiAnnotation> psiAnnotations = JavaAnnotationIndex.getInstance().getAnnotations(controllerAnnotation.getShortName(), module.getProject(), globalSearchScope);
             for (PsiAnnotation psiAnnotation : psiAnnotations) {
                 if (!controllerAnnotation.getQualifiedName().equals(psiAnnotation.getQualifiedName())) {
                     continue;

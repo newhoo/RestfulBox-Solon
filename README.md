@@ -27,11 +27,7 @@ Download `distributions/RestfulBox-Solon-x.x.x.zip` and install in idea.
 
 
 ## Usage
-After installed this plugin, you should enable it in `RestfulBox` setting. Refresh in `RestfulBox` window.
-
-![enable](./.images/setting.png)
-
-You will see.
+After installed this plugin, refresh in `RestfulBox` window.
 
 ![plugin](./.images/plugin.png)
 
@@ -44,7 +40,7 @@ Jump from code:
 ![plugin](./.images/jump.png)
 
 More introduction:
-https://github.com/newhoo/RESTKit/blob/main/doc/en/README.md
+https://github.com/newhoo/RestfulBox/blob/main/doc/en/README.md
 
 
 ## Sponsor

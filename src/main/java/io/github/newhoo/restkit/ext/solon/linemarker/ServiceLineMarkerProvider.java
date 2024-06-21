@@ -25,7 +25,7 @@ public class ServiceLineMarkerProvider implements LineMarkerProvider {
 
     @Override
     public LineMarkerInfo<?> getLineMarkerInfo(@NotNull PsiElement element) {
-        if (element instanceof PsiMethod && ConfigHelper.getCommonSetting(element.getProject()).isEnableMethodLineMarker()) {
+        if (element instanceof PsiMethod && ConfigHelper.getGlobalSetting().isEnableMethodLineMarker()) {
             PsiMethod psiMethod = (PsiMethod) element;
             if (!psiMethod.hasAnnotation(REQUEST_MAPPING.getQualifiedName())) {
                 return null;
@@ -44,7 +44,7 @@ public class ServiceLineMarkerProvider implements LineMarkerProvider {
                                                     return restItem;
                                                 });
                                             },
-                                            GutterIconRenderer.Alignment.LEFT, () -> "RestfulBox-Solon");
+                                            GutterIconRenderer.Alignment.LEFT, () -> "RestfulBox");
             }
         }
         return null;

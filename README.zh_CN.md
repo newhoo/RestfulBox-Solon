@@ -22,11 +22,7 @@ Idea先安装依赖插件`RestfulBox`，可在线安装，再安装RestfulBox-So
 
 
 ## 使用
-安装完成后，在`RestfulBox`插件设置中启用Solon，然后在`RestfulBox`窗口刷新项目接口。
-
-![enable](./.images/setting.png)
-
-如下图：
+安装完成后，然后在`RestfulBox`窗口刷新项目接口。
 
 ![plugin](./.images/plugin.png)
 
@@ -39,7 +35,7 @@ Idea先安装依赖插件`RestfulBox`，可在线安装，再安装RestfulBox-So
 ![plugin](./.images/jump.png)
 
 更多说明：
-https://github.com/newhoo/RESTKit/blob/main/doc/zh_CN/%E7%9B%AE%E5%BD%95.md
+https://github.com/newhoo/RestfulBox/blob/main/doc/zh_CN/%E7%9B%AE%E5%BD%95.md
 
 ## 支持作者
 你的支持是鼓励我前行的动力，非常感谢~
