@@ -1,7 +1,6 @@
 <idea-plugin>
     <id>io.github.newhoo.restkit.ext.solon</id>
     <name>RestfulSolon</name>
-    <!--  <version>1.0.0</version>-->
     <vendor email="huzunrong@foxmail.com" url="https://github.com/newhoo/RestfulBox-Solon">RestfulBox</vendor>
 
     <description><![CDATA[
@@ -16,6 +15,11 @@
     ]]></description>
 
     <change-notes><![CDATA[
+        1.0.3
+        <ul>
+            <li>Adapts to RestfulBox 5.0;</li>
+        </ul>
+
         1.0.2
         <ul>
             <li>fix bug.</li>
@@ -44,7 +48,6 @@
 
     <extensions defaultExtensionNs="com.intellij">
         <!-- Add your extensions here -->
-        <codeInsight.lineMarkerProvider language="" implementationClass="io.github.newhoo.restkit.ext.solon.linemarker.ServiceLineMarkerProvider"/>
     </extensions>
 
     <extensions defaultExtensionNs="io.github.newhoo.restkit">
