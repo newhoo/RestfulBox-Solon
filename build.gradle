@@ -4,7 +4,7 @@ plugins {
 }
 
 group 'io.github.newhoo.restkit.ext'
-version '1.0.3'
+version '1.0.4'
 
 java {
     sourceCompatibility = JavaVersion.VERSION_17
@@ -19,6 +19,7 @@ repositories {
 dependencies {
     compileOnly 'org.projectlombok:lombok:1.18.22'
     annotationProcessor 'org.projectlombok:lombok:1.18.22'
+//    compileOnly fileTree(dir: 'libs', includes: ['*jar'])
 }
 
 intellij {
@@ -27,7 +28,8 @@ intellij {
 //    type.set("IU")
     updateSinceUntilBuild.set(false)
     downloadSources.set(true)
-    plugins.set(['java', 'io.github.newhoo.restkit:4.0.0'])
+//    plugins.set(['java', 'io.github.newhoo.restkit:4.0.0'])
+    plugins.set(['java', file("D:/Projects/Plugins/RestfulBox-Plus/build/libs/RestfulBox-5.3.0-obfuscated.jar")])
     sandboxDir.set("${rootProject.rootDir}/idea-sandbox")
 }
 

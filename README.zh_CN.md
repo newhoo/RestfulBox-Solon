@@ -16,11 +16,6 @@ Idea先安装依赖插件`RestfulBox`，可在线安装，再安装RestfulBox-So
 
 推荐 <kbd>Preferences(Settings)</kbd> > <kbd>Plugins</kbd> > <kbd>Browse repositories...</kbd> > <kbd>输入"Solon"</kbd> > <kbd>点击Install</kbd>
 
-- **本地安装**
-
-下载 `distributions/RestfulBox-Solon-x.x.x.zip`，本地打开idea安装
-
-
 ## 使用
 安装完成后，然后在`RestfulBox`窗口刷新项目接口。
 

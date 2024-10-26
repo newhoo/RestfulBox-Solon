@@ -3,27 +3,25 @@ package io.github.newhoo.restkit.ext.solon;
 import com.intellij.openapi.module.Module;
 import com.intellij.openapi.project.Project;
 import com.intellij.psi.PsiAnnotation;
-import com.intellij.psi.PsiAnnotationMemberValue;
-import com.intellij.psi.PsiArrayInitializerMemberValue;
 import com.intellij.psi.PsiClass;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiField;
 import com.intellij.psi.PsiIdentifier;
-import com.intellij.psi.PsiLiteralExpression;
 import com.intellij.psi.PsiMethod;
 import com.intellij.psi.PsiModifier;
 import com.intellij.psi.PsiModifierList;
 import com.intellij.psi.PsiParameter;
 import com.intellij.psi.impl.java.stubs.index.JavaAnnotationIndex;
-import com.intellij.psi.javadoc.PsiDocToken;
 import com.intellij.psi.search.GlobalSearchScope;
 import io.github.newhoo.restkit.ext.solon.helper.PsiAnnotationHelper;
 import io.github.newhoo.restkit.ext.solon.helper.PsiClassHelper;
 import io.github.newhoo.restkit.ext.solon.solon.SolonAnnotationHelper;
 import io.github.newhoo.restkit.ext.solon.solon.SolonControllerAnnotation;
 import io.github.newhoo.restkit.ext.solon.util.TypeUtils;
+import io.github.newhoo.restkit.open.LanguageResolver;
 import io.github.newhoo.restkit.open.ParamResolver;
 import io.github.newhoo.restkit.open.RequestResolver;
+import io.github.newhoo.restkit.open.ep.LanguageResolverProvider;
 import io.github.newhoo.restkit.open.ep.RestfulResolverProvider;
 import io.github.newhoo.restkit.open.model.JsonStruct;
 import io.github.newhoo.restkit.open.model.KV;
@@ -34,13 +32,13 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.ObjectUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -66,6 +64,20 @@ public class SolonApiResolver implements RequestResolver, ParamResolver {
     @Override
     public String getFrameworkName() {
         return "Solon";
+    }
+
+    @Override
+    public @NotNull String getDescription() {
+        return "- 支持 Solon 接口扫描和在线调试，识别 @Controller等注解<br/>- 支持 Java 语言";
+    }
+
+    public static Optional<LanguageResolver> getLanguageResolver(@NotNull PsiElement psiElement) {
+        return LanguageResolverProvider.EP_NAME.getExtensionList()
+                                               .stream()
+                                               .filter(Objects::nonNull)
+                                               .map(LanguageResolverProvider::createLanguageResolver)
+                                               .filter(languageResolver -> languageResolver.getLanguage().getID().equals(psiElement.getLanguage().getID()))
+                                               .findFirst();
     }
 
     @Override
@@ -113,8 +125,16 @@ public class SolonApiResolver implements RequestResolver, ParamResolver {
     @Override
     public SimpleLineMarkerInfo tryGenerateLineMarker(@NotNull PsiElement psiElement) {
         return Optional.of(psiElement)
-                       .filter(e -> e instanceof PsiIdentifier && canNavigateToTree(e.getParent()))
-                       .map(e -> new SimpleLineMarkerInfo(e.getParent(), e.getTextRange()))
+                       .filter(e -> canNavigateToTree(e))
+                       .flatMap(e -> Arrays.stream(e.getChildren())
+                                           .filter(child -> child instanceof PsiIdentifier)
+                                           .findFirst()
+                                           .map(child -> {
+                                               // fix: Performance warning: LineMarker is supposed to be registered for leaf elements only. 返回 PsiIdentifier
+                                               SimpleLineMarkerInfo simpleLineMarkerInfo = new SimpleLineMarkerInfo(child, child.getTextRange());
+                                               simpleLineMarkerInfo.setNavElementSupplier(() -> child.getParent());
+                                               return simpleLineMarkerInfo;
+                                           }))
                        .orElse(null);
     }
 
@@ -144,12 +164,35 @@ public class SolonApiResolver implements RequestResolver, ParamResolver {
             return Collections.emptyList();
         }
 
+        Optional<LanguageResolver> languageResolver = getLanguageResolver(psiClass);
+        if (languageResolver.map(l -> l.isIgnored(psiClass)).orElse(false)) {
+            return Collections.emptyList();
+        }
+        String groupName = languageResolver.flatMap(l -> l.findApiGroup(psiClass)).orElse(psiClass.getQualifiedName());
+        Set<String> classTags = languageResolver.map(l -> l.findApiTags(psiClass)).orElse(Collections.emptySet());
+
         List<RestItem> itemList = new ArrayList<>();
         List<MethodPath> typeMethodPaths = SolonAnnotationHelper.getTypeMethodPaths(psiClass);
 
         for (PsiMethod psiMethod : psiMethods) {
+            if (languageResolver.map(l -> l.isIgnored(psiMethod)).orElse(false)) {
+                continue;
+            }
             List<MethodPath> methodMethodPaths = SolonAnnotationHelper.getMethodMethodPaths(psiMethod);
-            itemList.addAll(combineTypeAndMethod(typeMethodPaths, methodMethodPaths, psiMethod, module));
+            List<RestItem> restItems = combineTypeAndMethod(typeMethodPaths, methodMethodPaths, psiMethod, module);
+
+            String apiName = languageResolver.flatMap(l -> l.findApiName(psiMethod)).orElseGet(psiMethod::getName);
+            String description = languageResolver.flatMap(l -> l.findApiDescription(psiMethod)).orElse("");
+            Set<String> methodTags = languageResolver.map(l -> l.findApiTags(psiMethod)).orElse(Collections.emptySet());
+            for (RestItem item : restItems) {
+
+                item.setName(apiName);
+                item.setDescription(description);
+                item.setFolderPath(item.getModuleName(), groupName, true);
+                item.setTags(new LinkedHashSet<String>(org.apache.commons.collections.CollectionUtils.union(classTags, methodTags)));
+            }
+
+            itemList.addAll(restItems);
         }
         return itemList;
     }
@@ -203,30 +246,6 @@ public class SolonApiResolver implements RequestResolver, ParamResolver {
     @Override
     public JsonStruct buildResponseBodyStruct(PsiElement psiElement) {
         return null;
-    }
-
-    @NotNull
-    @Override
-    public String buildDescription(@NotNull PsiElement psiElement) {
-        if (!(psiElement instanceof PsiMethod)) {
-            return "";
-        }
-        PsiMethod psiMethod = (PsiMethod) psiElement;
-
-        String restName = null;
-        String location;
-        if (psiMethod.getDocComment() != null) {
-            restName = Arrays.stream(psiMethod.getDocComment().getDescriptionElements())
-                             .filter(e -> e instanceof PsiDocToken)
-                             .filter(e -> StringUtils.isNotBlank(e.getText()))
-                             .findFirst()
-                             .map(e -> e.getText().trim()).orElse(null);
-        }
-        location = psiMethod.getContainingClass().getName().concat("#").concat(psiMethod.getName());
-        if (StringUtils.isNotEmpty(restName)) {
-            location = location.concat("#").concat(restName);
-        }
-        return location;
     }
 
     @NotNull
@@ -385,22 +404,6 @@ public class SolonApiResolver implements RequestResolver, ParamResolver {
                      .orElse(null);
     }
 
-    private List<KV> getHeaderItem(PsiAnnotationMemberValue headers) {
-        if (headers instanceof PsiLiteralExpression) {
-            final String s = String.valueOf(((PsiLiteralExpression) headers).getValue());
-            String[] split = StringUtils.split(s, "=");
-            return split.length > 1 ? Collections.singletonList(new KV(split[0], split[1])) : Collections.emptyList();
-        }
-
-        List<KV> list = new ArrayList<>();
-        if (headers instanceof PsiArrayInitializerMemberValue) {
-            for (PsiAnnotationMemberValue initializer : ((PsiArrayInitializerMemberValue) headers).getInitializers()) {
-                list.addAll(getHeaderItem(initializer));
-            }
-        }
-        return list;
-    }
-
     @NotNull
     private List<Parameter> getParameterList(PsiMethod psiMethod) {
         List<Parameter> parameterList = new ArrayList<>();
@@ -483,7 +486,7 @@ public class SolonApiResolver implements RequestResolver, ParamResolver {
 
     public static class SolonApiResolverProvider implements RestfulResolverProvider {
         @Override
-        public RequestResolver createRequestResolver(@NotNull Project project) {
+        public @NotNull RequestResolver createRequestResolver() {
             return new SolonApiResolver();
         }
     }

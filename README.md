@@ -21,11 +21,6 @@ Firstly install `RestfulBox` plugin in Idea online. Then install RestfulBox-Solo
 
 Recommended <kbd>Preferences(Settings)</kbd> > <kbd>Plugins</kbd> > <kbd>Browse repositories...</kbd> > <kbd>find "Solon"</kbd> > <kbd>Install Plugins</kbd>
 
-- **Local install**
-
-Download `distributions/RestfulBox-Solon-x.x.x.zip` and install in idea.
-
-
 ## Usage
 After installed this plugin, refresh in `RestfulBox` window.
 
