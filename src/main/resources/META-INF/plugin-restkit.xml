@@ -1,0 +1,5 @@
+<idea-plugin>
+    <extensions defaultExtensionNs="io.github.newhoo.restkit">
+        <restfulResolver implementation="io.github.newhoo.restkit.ext.solon.SolonApiResolver$SolonApiResolverProvider"/>
+    </extensions>
+</idea-plugin>

@@ -4,7 +4,7 @@ import com.intellij.psi.PsiAnnotation;
 import com.intellij.psi.PsiClass;
 import com.intellij.psi.PsiMethod;
 import io.github.newhoo.restkit.ext.solon.MethodPath;
-import io.github.newhoo.restkit.ext.solon.helper.PsiAnnotationHelper;
+import io.github.newhoo.restkit.open.helper.java.JavaHelper;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
@@ -21,14 +21,14 @@ public class SolonAnnotationHelper {
      * 类上的注解
      */
     public static List<MethodPath> getTypeMethodPaths(PsiClass psiClass) {
-        return getMethodPaths(solonMappingAnno -> PsiAnnotationHelper.getInheritedAnnotation(psiClass, solonMappingAnno.getQualifiedName()));
+        return getMethodPaths(solonMappingAnno -> JavaHelper.getInheritedAnnotation(psiClass, solonMappingAnno.getQualifiedName()));
     }
 
     /**
      * 方法上的注解
      */
     public static List<MethodPath> getMethodMethodPaths(PsiMethod psiMethod) {
-        return getMethodPaths(solonMappingAnno -> PsiAnnotationHelper.getInheritedAnnotation(psiMethod, solonMappingAnno.getQualifiedName()));
+        return getMethodPaths(solonMappingAnno -> JavaHelper.getInheritedAnnotation(psiMethod, solonMappingAnno.getQualifiedName()));
     }
 
     private static List<MethodPath> getMethodPaths(@NotNull Function<SolonRequestMethodAnnotation, PsiAnnotation> getAnno) {
@@ -40,18 +40,18 @@ public class SolonAnnotationHelper {
         String path = "";
         List<String> methodList;
 
-        List<String> pathList = PsiAnnotationHelper.getAnnotationAttributeValues(requestMappingAnnotation, "value");
+        List<String> pathList = JavaHelper.getAnnotationAttributeValues(requestMappingAnnotation, "value");
         if (pathList.isEmpty()) {
-            pathList = PsiAnnotationHelper.getAnnotationAttributeValues(requestMappingAnnotation, "path");
+            pathList = JavaHelper.getAnnotationAttributeValues(requestMappingAnnotation, "path");
         }
         if (!pathList.isEmpty()) {
             path = pathList.get(0);
         }
 
-        methodList = PsiAnnotationHelper.getAnnotationAttributeValues(requestMappingAnnotation, "method")
-                                        .stream()
-                                        .map(method -> method.replace("MethodType.", ""))
-                                        .collect(Collectors.toList());
+        methodList = JavaHelper.getAnnotationAttributeValues(requestMappingAnnotation, "method")
+                               .stream()
+                               .map(method -> method.replace("MethodType.", ""))
+                               .collect(Collectors.toList());
 
         for (SolonRequestMethodAnnotation annotation : SolonRequestMethodAnnotation.values()) {
             if (annotation.getMethod() != null) {

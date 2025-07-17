@@ -2,63 +2,44 @@ package io.github.newhoo.restkit.ext.solon;
 
 import com.intellij.openapi.module.Module;
 import com.intellij.openapi.project.Project;
-import com.intellij.psi.PsiAnnotation;
-import com.intellij.psi.PsiClass;
-import com.intellij.psi.PsiElement;
-import com.intellij.psi.PsiField;
-import com.intellij.psi.PsiIdentifier;
-import com.intellij.psi.PsiMethod;
-import com.intellij.psi.PsiModifier;
-import com.intellij.psi.PsiModifierList;
-import com.intellij.psi.PsiParameter;
+import com.intellij.psi.*;
 import com.intellij.psi.impl.java.stubs.index.JavaAnnotationIndex;
 import com.intellij.psi.search.GlobalSearchScope;
-import io.github.newhoo.restkit.ext.solon.helper.PsiAnnotationHelper;
-import io.github.newhoo.restkit.ext.solon.helper.PsiClassHelper;
 import io.github.newhoo.restkit.ext.solon.solon.SolonAnnotationHelper;
 import io.github.newhoo.restkit.ext.solon.solon.SolonControllerAnnotation;
-import io.github.newhoo.restkit.ext.solon.util.TypeUtils;
 import io.github.newhoo.restkit.open.LanguageResolver;
 import io.github.newhoo.restkit.open.ParamResolver;
 import io.github.newhoo.restkit.open.RequestResolver;
-import io.github.newhoo.restkit.open.ep.LanguageResolverProvider;
 import io.github.newhoo.restkit.open.ep.RestfulResolverProvider;
-import io.github.newhoo.restkit.open.model.JsonStruct;
+import io.github.newhoo.restkit.open.helper.java.JavaHelper;
+import io.github.newhoo.restkit.open.helper.java.JavaTypeHelper;
 import io.github.newhoo.restkit.open.model.KV;
-import io.github.newhoo.restkit.open.model.PsiRestItem;
-import io.github.newhoo.restkit.open.model.RestItem;
-import io.github.newhoo.restkit.open.model.SimpleLineMarkerInfo;
+import io.github.newhoo.restkit.open.model.ProjectSetting;
+import io.github.newhoo.restkit.open.model.api.PsiRestItem;
+import io.github.newhoo.restkit.open.model.api.RestItem;
+import io.github.newhoo.restkit.open.model.api.SimpleLineMarkerInfo;
+import io.github.newhoo.restkit.open.model.api.parameter.JsonStruct;
+import io.github.newhoo.restkit.open.model.api.parameter.ParamType;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.ObjectUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static io.github.newhoo.restkit.ext.solon.solon.SolonRequestMethodAnnotation.REQUEST_MAPPING;
-import static io.github.newhoo.restkit.ext.solon.solon.SolonRequestParamAnnotation.PATH_VARIABLE;
-import static io.github.newhoo.restkit.ext.solon.solon.SolonRequestParamAnnotation.REQUEST_BODY;
-import static io.github.newhoo.restkit.ext.solon.solon.SolonRequestParamAnnotation.REQUEST_COOKIE;
-import static io.github.newhoo.restkit.ext.solon.solon.SolonRequestParamAnnotation.REQUEST_HEADER;
-import static io.github.newhoo.restkit.ext.solon.solon.SolonRequestParamAnnotation.REQUEST_PARAM;
+import static io.github.newhoo.restkit.ext.solon.solon.SolonRequestParamAnnotation.*;
 
 /**
  * solon service scanner
  *
  * @since 1.0.0
  */
-public class SolonApiResolver implements RequestResolver, ParamResolver {
+public class SolonApiResolver implements RequestResolver, ParamResolver<PsiMethod> {
 
     @NotNull
     @Override
@@ -67,17 +48,13 @@ public class SolonApiResolver implements RequestResolver, ParamResolver {
     }
 
     @Override
-    public @NotNull String getDescription() {
-        return "- 支持 Solon 接口扫描和在线调试，识别 @Controller等注解<br/>- 支持 Java 语言";
+    public int order() {
+        return 6;
     }
 
-    public static Optional<LanguageResolver> getLanguageResolver(@NotNull PsiElement psiElement) {
-        return LanguageResolverProvider.EP_NAME.getExtensionList()
-                                               .stream()
-                                               .filter(Objects::nonNull)
-                                               .map(LanguageResolverProvider::createLanguageResolver)
-                                               .filter(languageResolver -> languageResolver.getLanguage().getID().equals(psiElement.getLanguage().getID()))
-                                               .findFirst();
+    @Override
+    public @NotNull String getDescription() {
+        return "- 支持 Solon 接口扫描和在线调试，识别 @Controller等注解<br/>- 支持 Java 语言";
     }
 
     @Override
@@ -95,13 +72,8 @@ public class SolonApiResolver implements RequestResolver, ParamResolver {
                 PsiModifierList psiModifierList = (PsiModifierList) psiAnnotation.getParent();
                 PsiElement psiElement = psiModifierList.getParent();
 
-                if (psiElement instanceof PsiClass) {
-                    PsiClass psiClass = (PsiClass) psiElement;
-//                    if (filterClassQualifiedNames.contains(psiClass.getQualifiedName())) {
-//                        continue;
-//                    }
-                    List<RestItem> serviceItemList = getRequestItemList(psiClass, module);
-                    serviceItemList.forEach(e -> e.setPackageName(psiClass.getQualifiedName()));
+                if (psiElement instanceof PsiClass psiClass) {
+                    List<RestItem> serviceItemList = getRequestItemList(psiClass, module, JavaHelper.getLanguageResolver(psiElement));
                     itemList.addAll(serviceItemList);
                 }
             }
@@ -111,15 +83,14 @@ public class SolonApiResolver implements RequestResolver, ParamResolver {
 
     @Override
     public boolean canNavigateToTree(@NotNull PsiElement psiElement) {
-        if (!(psiElement instanceof PsiMethod)) {
+        if (!(psiElement instanceof PsiMethod psiMethod)) {
             return false;
         }
-        PsiMethod psiMethod = (PsiMethod) psiElement;
         if (!psiMethod.hasAnnotation(REQUEST_MAPPING.getQualifiedName())) {
             return false;
         }
         PsiClass containingClass = psiMethod.getContainingClass();
-        return containingClass != null && containingClass.hasAnnotation("org.noear.solon.annotation.Controller");
+        return containingClass != null && containingClass.hasAnnotation(SolonControllerAnnotation.CONTROLLER.getQualifiedName());
     }
 
     @Override
@@ -150,10 +121,48 @@ public class SolonApiResolver implements RequestResolver, ParamResolver {
         }
         List<MethodPath> typeMethodPaths = SolonAnnotationHelper.getTypeMethodPaths(psiMethod.getContainingClass());
         List<MethodPath> methodMethodPaths = SolonAnnotationHelper.getMethodMethodPaths(psiMethod);
-        return combineFirstRestItem(typeMethodPaths, methodMethodPaths, psiMethod, "");
+        RestItem restItem = combineFirstRestItem(typeMethodPaths, methodMethodPaths, psiMethod, "");
+        return restItem;
     }
 
-    private List<RestItem> getRequestItemList(PsiClass psiClass, Module module) {
+    @Override
+    public List<RestItem> tryGenerateRestItemsForPreview(@NotNull PsiElement psiElement) {
+        PsiMethod psiMethod;
+        if (psiElement instanceof PsiMethod) {
+            psiMethod = (PsiMethod) psiElement;
+        } else if (psiElement.getParent() instanceof PsiMethod) {
+            psiMethod = (PsiMethod) psiElement.getParent();
+        } else {
+            return null;
+        }
+        PsiClass containingClass = psiMethod.getContainingClass();
+        if (containingClass != null) {
+            return getRequestItemListInScope(containingClass);
+        }
+        return null;
+    }
+
+    private List<RestItem> getRequestItemListInScope(PsiClass psiClass) {
+        List<RestItem> itemList = new LinkedList<>();
+        List<MethodPath> typeMethodPaths = SolonAnnotationHelper.getTypeMethodPaths(psiClass);
+        LanguageResolver languageResolver = JavaHelper.getLanguageResolver(psiClass);
+        for (PsiMethod psiMethod : psiClass.getMethods()) {
+            List<MethodPath> methodMethodPaths = SolonAnnotationHelper.getMethodMethodPaths(psiMethod);
+
+            RestItem restItem = combineFirstRestItem(typeMethodPaths, methodMethodPaths, psiMethod, "");
+            if (restItem == null) {
+                continue;
+            }
+
+            String apiName = languageResolver.findApiName(psiMethod).orElseGet(psiMethod::getName);
+            restItem.setName(apiName);
+            restItem.setFolderPath(psiClass.getName());
+            itemList.add(restItem);
+        }
+        return itemList;
+    }
+
+    private List<RestItem> getRequestItemList(PsiClass psiClass, Module module, LanguageResolver languageResolver) {
         List<PsiMethod> psiMethods = new ArrayList<>(Arrays.asList(psiClass.getMethods()));
         for (PsiClass aSuper : psiClass.getSupers()) {
             if (!"java.lang.Object".equals(aSuper.getQualifiedName())) {
@@ -164,32 +173,29 @@ public class SolonApiResolver implements RequestResolver, ParamResolver {
             return Collections.emptyList();
         }
 
-        Optional<LanguageResolver> languageResolver = getLanguageResolver(psiClass);
-        if (languageResolver.map(l -> l.isIgnored(psiClass)).orElse(false)) {
+        if (languageResolver.isIgnored(psiClass)) {
             return Collections.emptyList();
         }
-        String groupName = languageResolver.flatMap(l -> l.findApiGroup(psiClass)).orElse(psiClass.getQualifiedName());
-        Set<String> classTags = languageResolver.map(l -> l.findApiTags(psiClass)).orElse(Collections.emptySet());
+        String groupName = languageResolver.findApiGroup(psiClass).orElseGet(psiClass::getQualifiedName);
+        Set<String> classTags = languageResolver.findApiTags(psiClass);
+        boolean showModuleFolder = ProjectSetting.getInstance(psiClass.getProject()).isShowModuleFolder();
 
         List<RestItem> itemList = new ArrayList<>();
         List<MethodPath> typeMethodPaths = SolonAnnotationHelper.getTypeMethodPaths(psiClass);
 
         for (PsiMethod psiMethod : psiMethods) {
-            if (languageResolver.map(l -> l.isIgnored(psiMethod)).orElse(false)) {
+            if (languageResolver.isIgnored(psiMethod)) {
                 continue;
             }
             List<MethodPath> methodMethodPaths = SolonAnnotationHelper.getMethodMethodPaths(psiMethod);
             List<RestItem> restItems = combineTypeAndMethod(typeMethodPaths, methodMethodPaths, psiMethod, module);
 
-            String apiName = languageResolver.flatMap(l -> l.findApiName(psiMethod)).orElseGet(psiMethod::getName);
-            String description = languageResolver.flatMap(l -> l.findApiDescription(psiMethod)).orElse("");
-            Set<String> methodTags = languageResolver.map(l -> l.findApiTags(psiMethod)).orElse(Collections.emptySet());
+            String apiName = languageResolver.findApiName(psiMethod).orElseGet(psiMethod::getName);
+            Set<String> methodTags = languageResolver.findApiTags(psiMethod);
             for (RestItem item : restItems) {
-
                 item.setName(apiName);
-                item.setDescription(description);
-                item.setFolderPath(item.getModuleName(), groupName, true);
-                item.setTags(new LinkedHashSet<String>(org.apache.commons.collections.CollectionUtils.union(classTags, methodTags)));
+                item.setFolderPath(item.getModuleName(), groupName, showModuleFolder);
+                item.setTags(new LinkedHashSet<String>(CollectionUtils.union(classTags, methodTags)));
             }
 
             itemList.addAll(restItems);
@@ -199,127 +205,22 @@ public class SolonApiResolver implements RequestResolver, ParamResolver {
 
     @NotNull
     @Override
-    public List<KV> buildHeaders(@NotNull PsiElement psiElement) {
-        if (!(psiElement instanceof PsiMethod)) {
-            return Collections.emptyList();
-        }
-        PsiMethod psiMethod = (PsiMethod) psiElement;
-        return buildHeaderString(psiMethod);
-    }
-
-    @NotNull
-    @Override
-    public List<KV> buildParams(@NotNull PsiElement psiElement) {
-        if (!(psiElement instanceof PsiMethod)) {
-            return Collections.emptyList();
-        }
-        PsiMethod psiMethod = (PsiMethod) psiElement;
-        return buildParamString(psiMethod);
-    }
-
-    @Override
-    public @NotNull List<JsonStruct> buildParamStruct(@NotNull PsiElement psiElement) {
-        return List.of();
-    }
-
-    @NotNull
-    @Override
-    public String buildRequestBodyJson(@NotNull PsiElement psiElement) {
-        if (!(psiElement instanceof PsiMethod)) {
-            return "";
-        }
-        PsiMethod psiMethod = (PsiMethod) psiElement;
-        String s = buildRequestBodyJson(psiMethod);
-        return Objects.nonNull(s) ? s : "";
-    }
-
-    @Override
-    public String buildResponseBodyJson(@NotNull PsiElement psiElement) {
-        return "";
-    }
-
-    @Override
-    public JsonStruct buildRequestBodyStruct(PsiElement psiElement) {
-        return null;
-    }
-
-    @Override
-    public JsonStruct buildResponseBodyStruct(PsiElement psiElement) {
-        return null;
-    }
-
-    @NotNull
-    public RestItem createRestServiceItem(@NotNull Module module, PsiElement psiElement, @NotNull String typePath, @NotNull String methodPath, String method) {
-        String requestPath = getCombinedPath(typePath, methodPath);
-        return new PsiRestItem(requestPath, method, module.getName(), getFrameworkName(), psiElement, this);
-    }
-
-    @NotNull
-    public RestItem createRestServiceItem(@NotNull Module module, PsiElement psiElement, @NotNull String path, String method) {
-        return new PsiRestItem(path, method, module.getName(), getFrameworkName(), psiElement, this);
-    }
-
-    public List<RestItem> combineTypeAndMethod(List<MethodPath> typeMethodPaths, List<MethodPath> methodMethodPaths, PsiElement psiElement, Module module) {
-        List<RestItem> itemList = new ArrayList<>();
-        for (MethodPath methodPath : methodMethodPaths) {
-            if (typeMethodPaths.isEmpty()) {
-                RestItem item = createRestServiceItem(module, psiElement, "", methodPath.getPath(), methodPath.getMethod());
-                itemList.add(item);
-            } else {
-                for (MethodPath typeMethodPath : typeMethodPaths) {
-                    String combinedPath = getCombinedPath(typeMethodPath.getPath(), methodPath.getPath());
-                    String typeMethod = typeMethodPath.getMethod();
-
-                    if (typeMethod != null && !typeMethod.equals(methodPath.getMethod())) {
-                        RestItem item = createRestServiceItem(module, psiElement, combinedPath, typeMethod);
-                        itemList.add(item);
-                    }
-
-                    RestItem item = createRestServiceItem(module, psiElement, combinedPath, methodPath.getMethod());
-                    itemList.add(item);
-                }
-            }
-        }
-        return itemList;
-    }
-
-    public RestItem combineFirstRestItem(List<MethodPath> typeMethodPaths, List<MethodPath> methodMethodPaths, PsiElement psiElement, String moduleName) {
-        if (methodMethodPaths.isEmpty()) {
-            return null;
-        }
-        MethodPath methodPath = methodMethodPaths.get(0);
-        if (typeMethodPaths.isEmpty()) {
-            String requestPath = getCombinedPath("", methodPath.getPath());
-            return new PsiRestItem(requestPath, methodPath.getMethod(), moduleName, getFrameworkName(), psiElement, this);
-        } else {
-            MethodPath typeMethodPath = typeMethodPaths.get(0);
-            String combinedPath = getCombinedPath(typeMethodPath.getPath(), methodPath.getPath());
-            String typeMethod = typeMethodPath.getMethod();
-
-            if (typeMethod != null && !typeMethod.equals(methodPath.getMethod())) {
-                return new PsiRestItem(combinedPath, typeMethod, moduleName, getFrameworkName(), psiElement, this);
-            }
-
-            return new PsiRestItem(combinedPath, methodPath.getMethod(), moduleName, getFrameworkName(), psiElement, this);
-        }
-    }
-
-    public List<KV> buildHeaderString(PsiMethod psiMethod) {
+    public List<KV> buildHeaders(@NotNull PsiMethod psiMethod) {
         List<KV> list = new ArrayList<>();
         PsiParameter[] psiParameters = psiMethod.getParameterList().getParameters();
         for (PsiParameter psiParameter : psiParameters) {
             {
                 PsiAnnotation requestHeaderAnno = psiParameter.getAnnotation(REQUEST_HEADER.getQualifiedName());
                 if (requestHeaderAnno != null) {
-                    String headerName = ObjectUtils.defaultIfNull(PsiAnnotationHelper.getAnnotationValue(requestHeaderAnno, "value"),
-                            ObjectUtils.defaultIfNull(PsiAnnotationHelper.getAnnotationValue(requestHeaderAnno, "name"), psiParameter.getName()
+                    String headerName = ObjectUtils.defaultIfNull(JavaHelper.getAnnotationValue(requestHeaderAnno, "value"),
+                            ObjectUtils.defaultIfNull(JavaHelper.getAnnotationValue(requestHeaderAnno, "name"), psiParameter.getName()
                             ));
-                    PsiClass fieldClass = PsiClassHelper.findPsiClass(psiParameter.getType().getCanonicalText(), psiMethod.getProject());
+                    PsiClass fieldClass = JavaHelper.findPsiClass(psiParameter.getType().getCanonicalText(), psiMethod.getProject());
                     if (fieldClass != null && fieldClass.isEnum()) {
                         PsiField[] enumFields = fieldClass.getAllFields();
                         list.add(new KV(headerName, enumFields.length > 1 ? enumFields[0].getName() : ""));
                     } else {
-                        Object fieldDefaultValue = TypeUtils.getExampleValue(psiParameter.getType().getPresentableText(), true);
+                        Object fieldDefaultValue = JavaTypeHelper.getExampleValue(psiParameter.getType().getPresentableText(), psiParameter.getProject());
                         list.add(new KV(headerName, String.valueOf(fieldDefaultValue)));
                     }
                 }
@@ -327,15 +228,122 @@ public class SolonApiResolver implements RequestResolver, ParamResolver {
             {
                 PsiAnnotation requestHeaderAnno = psiParameter.getAnnotation(REQUEST_COOKIE.getQualifiedName());
                 if (requestHeaderAnno != null) {
-                    String headerName = ObjectUtils.defaultIfNull(PsiAnnotationHelper.getAnnotationValue(requestHeaderAnno, "value"),
-                            ObjectUtils.defaultIfNull(PsiAnnotationHelper.getAnnotationValue(requestHeaderAnno, "name"), psiParameter.getName()
+                    String headerName = ObjectUtils.defaultIfNull(JavaHelper.getAnnotationValue(requestHeaderAnno, "value"),
+                            ObjectUtils.defaultIfNull(JavaHelper.getAnnotationValue(requestHeaderAnno, "name"), psiParameter.getName()
                             ));
-                    Object fieldDefaultValue = TypeUtils.getExampleValue(psiParameter.getType().getPresentableText(), true);
+                    Object fieldDefaultValue = JavaTypeHelper.getExampleValue(psiParameter.getType().getPresentableText(), psiParameter.getProject());
                     list.add(new KV("Cookie", headerName + "=" + fieldDefaultValue));
                 }
             }
         }
         return list;
+    }
+
+    @NotNull
+    @Override
+    public List<KV> buildParams(@NotNull PsiMethod psiMethod) {
+        return buildParamString(psiMethod);
+    }
+
+    @Override
+    public @NotNull List<JsonStruct> buildParamStruct(@NotNull PsiMethod psiMethod) {
+        return buildParamString(psiMethod).stream().map(kv -> new JsonStruct(kv)).collect(Collectors.toList());
+    }
+
+    @NotNull
+    @Override
+    public String buildRequestBodyJson(@NotNull PsiMethod psiMethod) {
+        return Arrays.stream(psiMethod.getParameterList().getParameters())
+                     .filter(psiParameter -> psiParameter.hasAnnotation(REQUEST_BODY.getQualifiedName()))
+                     .findFirst()
+                     .map(psiParameter -> JavaHelper.convertClassToJSON(psiParameter.getType().getCanonicalText(), psiMethod.getProject()))
+                     .orElse("");
+    }
+
+    @Override
+    public JsonStruct buildRequestBodyStruct(@NotNull PsiMethod psiMethod) {
+        return Arrays.stream(psiMethod.getParameterList().getParameters())
+                     .filter(psiParameter -> psiParameter.hasAnnotation(REQUEST_BODY.getQualifiedName()))
+                     .findFirst()
+                     .map(psiParameter -> JavaHelper.convertClassToJSONStruct(psiParameter.getType().getCanonicalText(), psiMethod.getProject()))
+                     .orElse(null);
+    }
+
+    @Override
+    public @NotNull String buildResponseBodyJson(@NotNull PsiMethod psiMethod) {
+        return Optional.ofNullable(psiMethod.getReturnType())
+                       .flatMap(returnType -> JavaHelper.getLanguageResolver(psiMethod).findApiReturnType(psiMethod))
+                       .map(returnType -> JavaHelper.convertClassToJSON(returnType, psiMethod.getProject()))
+                       .orElse("");
+    }
+
+    @Override
+    public JsonStruct buildResponseBodyStruct(@NotNull PsiMethod psiMethod) {
+        return Optional.ofNullable(psiMethod.getReturnType())
+                       .flatMap(returnType -> JavaHelper.getLanguageResolver(psiMethod).findApiReturnType(psiMethod))
+                       .map(returnType -> JavaHelper.convertClassToJSONStruct(returnType, psiMethod.getProject()))
+                       .orElse(null);
+    }
+
+    @Override
+    public @NotNull String buildDescription(@NotNull PsiMethod psiMethod) {
+        return JavaHelper.getLanguageResolver(psiMethod).findApiDescription(psiMethod).orElse("");
+    }
+
+    @NotNull
+    public RestItem createRestServiceItem(@NotNull Module module, PsiMethod psiMethod, @NotNull String typePath, @NotNull String methodPath, String method) {
+        String requestPath = getCombinedPath(typePath, methodPath);
+        return new PsiRestItem<>(requestPath, method, module.getName(), psiMethod, this);
+    }
+
+    @NotNull
+    public RestItem createRestServiceItem(@NotNull Module module, PsiMethod psiMethod, @NotNull String path, String method) {
+        return new PsiRestItem<>(path, method, module.getName(), psiMethod, this);
+    }
+
+    public List<RestItem> combineTypeAndMethod(List<MethodPath> typeMethodPaths, List<MethodPath> methodMethodPaths, PsiMethod psiMethod, Module module) {
+        List<RestItem> itemList = new ArrayList<>();
+        for (MethodPath methodPath : methodMethodPaths) {
+            if (typeMethodPaths.isEmpty()) {
+                RestItem item = createRestServiceItem(module, psiMethod, "", methodPath.getPath(), methodPath.getMethod());
+                itemList.add(item);
+            } else {
+                for (MethodPath typeMethodPath : typeMethodPaths) {
+                    String combinedPath = getCombinedPath(typeMethodPath.getPath(), methodPath.getPath());
+                    String typeMethod = typeMethodPath.getMethod();
+
+                    if (typeMethod != null && !typeMethod.equals(methodPath.getMethod())) {
+                        RestItem item = createRestServiceItem(module, psiMethod, combinedPath, typeMethod);
+                        itemList.add(item);
+                    }
+
+                    RestItem item = createRestServiceItem(module, psiMethod, combinedPath, methodPath.getMethod());
+                    itemList.add(item);
+                }
+            }
+        }
+        return itemList;
+    }
+
+    public RestItem combineFirstRestItem(List<MethodPath> typeMethodPaths, List<MethodPath> methodMethodPaths, PsiMethod psiMethod, String moduleName) {
+        if (methodMethodPaths.isEmpty()) {
+            return null;
+        }
+        MethodPath methodPath = methodMethodPaths.stream().filter(o -> StringUtils.isNotEmpty(o.getMethod())).findFirst().orElse(methodMethodPaths.get(0));
+        if (typeMethodPaths.isEmpty()) {
+            String requestPath = getCombinedPath("", methodPath.getPath());
+            return new PsiRestItem<>(requestPath, methodPath.getMethod(), moduleName, psiMethod, this);
+        } else {
+            MethodPath typeMethodPath = typeMethodPaths.get(0);
+            String combinedPath = getCombinedPath(typeMethodPath.getPath(), methodPath.getPath());
+            String typeMethod = typeMethodPath.getMethod();
+
+            if (typeMethod != null && !typeMethod.equals(methodPath.getMethod())) {
+                return new PsiRestItem<>(combinedPath, typeMethod, moduleName, psiMethod, this);
+            }
+
+            return new PsiRestItem<>(combinedPath, methodPath.getMethod(), moduleName, psiMethod, this);
+        }
     }
 
     public List<KV> buildParamString(PsiMethod psiMethod) {
@@ -348,8 +356,8 @@ public class SolonApiResolver implements RequestResolver, ParamResolver {
             String paramType = parameter.getParamType();
 
             // 数组|集合
-            if (TypeUtils.isArray(paramType) || TypeUtils.isList(paramType)) {
-                paramType = TypeUtils.isArray(paramType)
+            if (JavaTypeHelper.isArray(paramType) || JavaTypeHelper.isList(paramType)) {
+                paramType = JavaTypeHelper.isArray(paramType)
                         ? paramType.replace("[]", "")
                         : paramType.contains("<")
                         ? paramType.substring(paramType.indexOf("<") + 1, paramType.lastIndexOf(">"))
@@ -357,18 +365,18 @@ public class SolonApiResolver implements RequestResolver, ParamResolver {
             }
 
             // 简单常用类型
-            if (TypeUtils.isPrimitiveOrSimpleType(paramType)) {
-                list.add(new KV(parameter.getParamName(), String.valueOf(TypeUtils.getExampleValue(paramType, true))));
+            if (JavaTypeHelper.isPrimitiveOrSimpleType(paramType)) {
+                list.add(new KV(parameter.getParamName(), String.valueOf(JavaTypeHelper.getExampleValue(paramType, psiMethod.getProject()))));
                 continue;
             }
             // 文件类型
             Set<String> fileParameterTypeSet = Stream.of("org.noear.solon.core.handle.UploadedFile").collect(Collectors.toSet());
             if (fileParameterTypeSet.contains(paramType)) {
-                list.add(new KV(parameter.getParamName(), "file@[filepath]"));
+                list.add(new KV(parameter.getParamName(), ParamType.FILE_CUSTOM_DESCRIPTOR));
                 continue;
             }
 
-            PsiClass psiClass = PsiClassHelper.findPsiClass(paramType, psiMethod.getProject());
+            PsiClass psiClass = JavaHelper.findPsiClass(paramType, psiMethod.getProject());
             if (psiClass != null) {
                 PsiField[] fields = psiClass.getAllFields();
                 if (psiClass.isEnum()) {
@@ -376,32 +384,21 @@ public class SolonApiResolver implements RequestResolver, ParamResolver {
                     continue;
                 }
                 for (PsiField field : fields) {
-                    if (field.hasModifierProperty(PsiModifier.STATIC) || field.hasModifierProperty(PsiModifier.TRANSIENT)) {
+                    if (field.hasModifierProperty(PsiModifier.STATIC) || field.hasModifierProperty(PsiModifier.TRANSIENT) || JavaHelper.getLanguageResolver(field).isIgnored(field)) {
                         continue;
                     }
-                    PsiClass fieldClass = PsiClassHelper.findPsiClass(field.getType().getCanonicalText(), psiMethod.getProject());
+                    PsiClass fieldClass = JavaHelper.findPsiClass(field.getType().getCanonicalText(), psiMethod.getProject());
                     if (fieldClass != null && fieldClass.isEnum()) {
                         PsiField[] enumFields = fieldClass.getAllFields();
                         list.add(new KV(field.getName(), enumFields.length > 1 ? enumFields[0].getName() : ""));
                     } else {
-                        Object fieldDefaultValue = TypeUtils.getExampleValue(field.getType().getPresentableText(), true);
+                        Object fieldDefaultValue = JavaTypeHelper.getExampleValue(field.getType().getPresentableText(), field.getProject());
                         list.add(new KV(field.getName(), String.valueOf(fieldDefaultValue)));
                     }
                 }
             }
         }
         return list;
-    }
-
-    /**
-     * 构建RequestBody json 参数
-     */
-    public String buildRequestBodyJson(PsiMethod psiMethod) {
-        return Arrays.stream(psiMethod.getParameterList().getParameters())
-                     .filter(psiParameter -> psiParameter.hasAnnotation(REQUEST_BODY.getQualifiedName()))
-                     .findFirst()
-                     .map(psiParameter -> PsiClassHelper.convertClassToJSON(psiParameter.getType().getCanonicalText(), psiMethod.getProject()))
-                     .orElse(null);
     }
 
     @NotNull
@@ -421,8 +418,8 @@ public class SolonApiResolver implements RequestResolver, ParamResolver {
             // @PathVariable
             PsiAnnotation pathVariableAnno = psiParameter.getAnnotation(PATH_VARIABLE.getQualifiedName());
             if (pathVariableAnno != null) {
-                String paramName = ObjectUtils.defaultIfNull(PsiAnnotationHelper.getAnnotationValue(pathVariableAnno, "value"),
-                        ObjectUtils.defaultIfNull(PsiAnnotationHelper.getAnnotationValue(pathVariableAnno, "name"), psiParameter.getName()
+                String paramName = ObjectUtils.defaultIfNull(JavaHelper.getAnnotationValue(pathVariableAnno, "value"),
+                        ObjectUtils.defaultIfNull(JavaHelper.getAnnotationValue(pathVariableAnno, "name"), psiParameter.getName()
                         ));
                 Parameter parameter = new Parameter(paramTypeName, paramName);
                 parameterList.add(parameter);
@@ -432,8 +429,8 @@ public class SolonApiResolver implements RequestResolver, ParamResolver {
             // @RequestParam
             PsiAnnotation requestParamAnno = psiParameter.getAnnotation(REQUEST_PARAM.getQualifiedName());
             if (requestParamAnno != null) {
-                String paramName = ObjectUtils.defaultIfNull(PsiAnnotationHelper.getAnnotationValue(requestParamAnno, "value"),
-                        ObjectUtils.defaultIfNull(PsiAnnotationHelper.getAnnotationValue(requestParamAnno, "name"), psiParameter.getName()
+                String paramName = ObjectUtils.defaultIfNull(JavaHelper.getAnnotationValue(requestParamAnno, "value"),
+                        ObjectUtils.defaultIfNull(JavaHelper.getAnnotationValue(requestParamAnno, "name"), psiParameter.getName()
                         ));
                 Parameter parameter = new Parameter(paramTypeName, paramName);
                 parameterList.add(parameter);
@@ -465,7 +462,6 @@ public class SolonApiResolver implements RequestResolver, ParamResolver {
     }
 
     @NotNull
-    @Override
     public Set<String> getParamFilterTypes(@NotNull Project project) {
         return Stream.of(
                 "java.util.Locale",

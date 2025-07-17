@@ -4,7 +4,7 @@ plugins {
 }
 
 group 'io.github.newhoo.restkit.ext'
-version '1.0.4'
+version '1.0.6'
 
 java {
     sourceCompatibility = JavaVersion.VERSION_17
@@ -29,7 +29,7 @@ intellij {
     updateSinceUntilBuild.set(false)
     downloadSources.set(true)
 //    plugins.set(['java', 'io.github.newhoo.restkit:4.0.0'])
-    plugins.set(['java', file("D:/Projects/Plugins/RestfulBox-Plus/build/libs/RestfulBox-5.3.0-obfuscated.jar")])
+    plugins.set(['java', file("C:\\Users\\newhoo\\AppData\\Roaming\\JetBrains\\IdeaIC2025.1\\plugins\\RestfulBox\\lib\\RestfulBox-6.2.0-obfuscated.jar")]) //插件安装目录找 C:\Users\newhoo\AppData\Roaming\JetBrains\IdeaIC2025.1\plugins\RestfulBox\lib\RestfulBox-6.2.0-obfuscated.jar
     sandboxDir.set("${rootProject.rootDir}/idea-sandbox")
 }
 

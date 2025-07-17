@@ -15,26 +15,22 @@
     ]]></description>
 
     <change-notes><![CDATA[
-        1.0.3-1.0.4
+        1.0.6
         <ul>
-            <li>Adapts to RestfulBox 5.0;</li>
+            <li>Adapts to RestfulBox 6.0</li>
         </ul>
     ]]>
     </change-notes>
 
     <!-- please see http://www.jetbrains.org/intellij/sdk/docs/basics/getting_started/build_number_ranges.html for description -->
-    <idea-version since-build="233.6"/>
+    <idea-version since-build="233.11799.241"/>
 
     <!-- please see http://www.jetbrains.org/intellij/sdk/docs/basics/getting_started/plugin_compatibility.html on how to target different products -->
     <!-- uncomment to enable plugin in all products -->
     <depends>com.intellij.modules.java</depends>
-    <depends>io.github.newhoo.restkit</depends>
+    <depends optional="true" config-file="plugin-restkit.xml">io.github.newhoo.restkit</depends>
 
     <extensions defaultExtensionNs="com.intellij">
         <!-- Add your extensions here -->
-    </extensions>
-
-    <extensions defaultExtensionNs="io.github.newhoo.restkit">
-        <restfulResolver implementation="io.github.newhoo.restkit.ext.solon.SolonApiResolver$SolonApiResolverProvider"/>
     </extensions>
 </idea-plugin>
